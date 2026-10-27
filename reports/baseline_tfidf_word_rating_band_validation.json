@@ -1,0 +1,42 @@
+{
+  "head": "rating_band",
+  "train_rows": 3266387,
+  "validation_rows": 842429,
+  "n_features": 300000,
+  "iterations_used": 671,
+  "max_iter": 1000,
+  "converged": true,
+  "macro_f1": 0.6357,
+  "balanced_accuracy": 0.6745,
+  "f1_per_class": {
+    "low": 0.6559,
+    "medium": 0.4185,
+    "high": 0.8325
+  },
+  "confusion_matrix": {
+    "labels": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "rows_true_cols_pred": [
+      [
+        63778,
+        14367,
+        5189
+      ],
+      [
+        29138,
+        75350,
+        54361
+      ],
+      [
+        18232,
+        111494,
+        470520
+      ]
+    ]
+  },
+  "ordinal_distance_error": 0.3041,
+  "share_distance_2_errors": 0.0278
+}

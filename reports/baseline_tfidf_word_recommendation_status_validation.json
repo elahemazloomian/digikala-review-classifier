@@ -1,0 +1,40 @@
+{
+  "head": "recommendation_status",
+  "train_rows": 2945521,
+  "validation_rows": 788325,
+  "n_features": 300000,
+  "iterations_used": 531,
+  "max_iter": 1000,
+  "converged": true,
+  "macro_f1": 0.6728,
+  "balanced_accuracy": 0.7294,
+  "f1_per_class": {
+    "no_idea": 0.4295,
+    "not_recommended": 0.6904,
+    "recommended": 0.8986
+  },
+  "confusion_matrix": {
+    "labels": [
+      "no_idea",
+      "not_recommended",
+      "recommended"
+    ],
+    "rows_true_cols_pred": [
+      [
+        51219,
+        19821,
+        17528
+      ],
+      [
+        14938,
+        58074,
+        2630
+      ],
+      [
+        83798,
+        14693,
+        525624
+      ]
+    ]
+  }
+}
