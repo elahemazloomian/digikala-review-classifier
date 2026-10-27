@@ -1,0 +1,45 @@
+{
+  "split_seed": 2026,
+  "mask_seed": "digikala-semi-supervised-v1",
+  "mask_rate": 0.2,
+  "split_strategy": "product-grouped; products ordered by md5(product_id|seed); cumulative review count cut at 70% and 85%",
+  "rating_bands": {
+    "scale": "1..5 (0 = missing rating)",
+    "low": "1 <= rate < 2.5",
+    "medium": "2.5 <= rate < 4.0",
+    "high": "4.0 <= rate <= 5.0",
+    "encoding": {
+      "low": 0,
+      "medium": 1,
+      "high": 2
+    }
+  },
+  "masking": {
+    "hash": "sha256(MASK_SEED|id)[:16] as hex integer",
+    "sort": "hash ascending, id ascending as tie-break",
+    "rounding": "floor(MASK_RATE * class_count)",
+    "labeled_train_rows_per_class": {
+      "no_idea": 416298,
+      "not_recommended": 354431,
+      "recommended": 2911171
+    },
+    "masked_per_class": {
+      "no_idea": 83259,
+      "not_recommended": 70886,
+      "recommended": 582234
+    }
+  },
+  "products_per_split": {
+    "train": 231933,
+    "validation": 50149,
+    "test": 49515
+  },
+  "rows_per_file": {
+    "train_supervised": 3552000,
+    "train_pseudo_unlabeled": 736379,
+    "natural_unlabeled": 18502,
+    "validation": 922896,
+    "test": 922896
+  },
+  "clean_rows_total": 6152673
+}
