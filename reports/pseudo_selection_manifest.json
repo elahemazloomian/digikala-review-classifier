@@ -1,0 +1,22 @@
+{
+  "run_dir": "artifacts\\ft_200k",
+  "threshold": 0.9,
+  "max_rows": 200000,
+  "seed": 2026,
+  "pool_rows": 736379,
+  "accepted_before_cap": 402492,
+  "accepted_share_of_pool": 0.5466,
+  "per_class_before_cap": {
+    "no_idea": 128,
+    "not_recommended": 34647,
+    "recommended": 367717
+  },
+  "kept_rows": 200000,
+  "per_class_kept": {
+    "no_idea": 66,
+    "not_recommended": 17125,
+    "recommended": 182809
+  },
+  "mean_confidence_kept": 0.9629,
+  "note": "selection uses model probabilities only; hidden labels were not read"
+}
