@@ -34,7 +34,7 @@ IGNORE = -100  # label value meaning "this target is missing for this row"
 # options that must be identical when resuming (otherwise the saved state does not fit)
 MUST_MATCH = ["model_name", "max_length", "train_rows", "batch_size", "grad_accum", "lr_encoder",
               "lr_head", "weight_decay", "warmup_ratio", "unfreeze_last", "freeze_embeddings",
-              "epochs", "seed", "bucket_chunk"]
+              "epochs", "seed", "bucket_chunk", "init_from", "extra_train_file", "weights_from_all"]
 
 
 # ----------------------------------------------------------------- data
@@ -220,6 +220,10 @@ def main():
     ap.add_argument("--unfreeze-last", type=int, default=-1, help="-1 = train every layer")
     ap.add_argument("--freeze-embeddings", action="store_true")
     ap.add_argument("--bucket-chunk", type=int, default=50, help="0 = plain random batches")
+    ap.add_argument("--init-from", default=None, help="start from the weights of this best.pt (relative to the project root)")
+    ap.add_argument("--extra-train-file", default=None, help="extra training rows in data/processed (e.g. pseudo-labeled rows)")
+    ap.add_argument("--weights-from-all", action="store_true",
+                    help="class weights from labeled + extra rows (default: from the labeled train rows only)")
     ap.add_argument("--eval-every-steps", type=int, default=0, help="0 = only at the end of each epoch")
     ap.add_argument("--rest-minutes", type=float, default=0.0, help="pause after each checkpoint")
     ap.add_argument("--patience", type=int, default=3)
@@ -243,6 +247,15 @@ def main():
 
     tr_texts, tr_rec, tr_band = load_rows("train_supervised.csv", args.train_rows, args.seed)
     va_texts, va_rec, va_band = load_rows("validation.csv", args.val_rows, args.seed)
+    w_rec, w_band = class_weights(tr_rec, len(REC_LABELS)), class_weights(tr_band, len(BAND_LABELS))
+    if args.extra_train_file:
+        ex_texts, ex_rec, ex_band = load_rows(args.extra_train_file, None, args.seed)
+        print(f"extra training rows from {args.extra_train_file}: {len(ex_texts)} "
+              f"(recommendation labels: {int((ex_rec != IGNORE).sum())}, rating-band labels: {int((ex_band != IGNORE).sum())})", flush=True)
+        tr_texts = tr_texts + ex_texts
+        tr_rec, tr_band = np.concatenate([tr_rec, ex_rec]), np.concatenate([tr_band, ex_band])
+        if args.weights_from_all:
+            w_rec, w_band = class_weights(tr_rec, len(REC_LABELS)), class_weights(tr_band, len(BAND_LABELS))
     print("train rows:", len(tr_texts), "| validation rows:", len(va_texts), flush=True)
     train_lengths = np.array([len(t) for t in tr_texts])
     order = np.argsort([len(t) for t in va_texts], kind="stable")  # similar lengths together: less padding
@@ -254,11 +267,18 @@ def main():
     val_loader = DataLoader(ReviewData(va_texts, va_rec, va_band), batch_size=args.batch_size * 2,
                             shuffle=False, collate_fn=collate)
 
-    w_rec, w_band = class_weights(tr_rec, len(REC_LABELS)), class_weights(tr_band, len(BAND_LABELS))
+    print("class weights | recommendation:", [round(float(v), 3) for v in w_rec],
+          "| rating band:", [round(float(v), 3) for v in w_band], flush=True)
     rec_loss_fn = nn.CrossEntropyLoss(weight=w_rec.to(device), ignore_index=IGNORE)
     band_loss_fn = nn.CrossEntropyLoss(weight=w_band.to(device), ignore_index=IGNORE)
 
-    model = ReviewClassifier(args.model_name).to(device)
+    model = ReviewClassifier(args.model_name)
+    if args.init_from:
+        init = torch.load(ROOT / args.init_from, map_location="cpu", weights_only=False)
+        model.load_state_dict(init["state_dict"])
+        print("initialised from", args.init_from, flush=True)
+        del init
+    model = model.to(device)
     apply_freezing(model, args.unfreeze_last, args.freeze_embeddings)
     total = sum(p.numel() for p in model.parameters())
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
@@ -288,7 +308,7 @@ def main():
     if args.resume:
         if not last_path.exists():
             sys.exit(f"--resume was given but {last_path} does not exist")
-        st = torch.load(last_path, map_location=device, weights_only=False)
+        st = torch.load(last_path, map_location="cpu", weights_only=False)  # load on CPU: no extra copy on the GPU
         for k in MUST_MATCH:
             if st["args"].get(k) != vars(args).get(k):
                 sys.exit(f"cannot resume: option {k} differs (saved {st['args'].get(k)!r}, now {vars(args).get(k)!r})")
@@ -298,6 +318,7 @@ def main():
         start_epoch, start_batch = st["epoch"], st["next_batch"]
         print(f"resumed: epoch {start_epoch + 1}, batch {start_batch}, step {step}, best so far {best:.4f}", flush=True)
         del st  # free the loaded copy
+
     t_before = history.get("minutes", 0.0) * 60
     t_start = time.time()
     seen = 0
