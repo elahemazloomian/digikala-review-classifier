@@ -8,3 +8,7 @@ __pycache__/
 *.pt
 *.pth
 artifacts/
+*_predictions.parquet
+reports/speed_test*
+reports/resume_test*
+reports/transformer_run_history.json
