@@ -1,0 +1,5 @@
+product_id,id,id_rows_in_raw,distinct_bodies_for_id,rate,recommendation_status,body_start
+11937317,54470119,2,1,5.0,recommended,محصول خوب و تحویل افتضاح
+11937317,54470119,2,1,1.0,not_recommended,محصول خوب و تحویل افتضاح
+12428909,54629007,2,2,4.0,recommended,پسندیدم
+12428909,54629007,2,2,4.0,recommended,پسندیدم 

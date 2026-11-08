@@ -1,0 +1,13 @@
+split,rating_band,n,pct_of_split
+train,(no band),375581,8.72
+train,high,2798010,64.97
+train,low,391603,9.09
+train,medium,741687,17.22
+validation,(no band),80467,8.72
+validation,high,600246,65.04
+validation,low,83334,9.03
+validation,medium,158849,17.21
+test,(no band),78112,8.46
+test,high,604159,65.46
+test,low,82678,8.96
+test,medium,157947,17.11
