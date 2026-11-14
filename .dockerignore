@@ -1,0 +1,15 @@
+# Files that must NOT be sent to Docker when building the image.
+# Reason: docker sends the whole project folder ("build context") to the builder; data/ and artifacts/ are huge.
+.git
+.venv
+data
+artifacts
+reports
+notebooks
+**/__pycache__
+*.pyc
+.pytest_cache
+.ipynb_checkpoints
+*.pt
+*.pth
+*.parquet

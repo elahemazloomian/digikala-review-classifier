@@ -1,0 +1,16 @@
+# Direct dependencies of the API service (app/main.py + src/predict_review.py).
+# Versions are the ones installed in the environment where the 12 tests passed (Python 3.11.18).
+# Jupyter, matplotlib, duckdb, pytest are NOT needed in the image.
+#
+# torch is the CPU build. It is not on the normal package index with this tag, so the Dockerfile
+# must pass a --find-links folder that contains CPU wheels (see the Dockerfile).
+fastapi==0.162.2
+uvicorn==0.54.0
+pydantic==2.14.3
+numpy==2.4.6
+scipy==1.17.1
+scikit-learn==1.9.1
+joblib==1.6.0
+tokenizers==0.23.3
+transformers==5.22.2
+torch==2.9.1+cpu
