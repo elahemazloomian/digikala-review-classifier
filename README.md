@@ -53,6 +53,10 @@ src/
   compare_test.py                    paired bootstrap comparison
   export_errors.py                   error tables
   predict_review.py                  offline prediction for one review, with explanations
+app/                                 FastAPI service (optional part)
+tests/                               API tests with TestClient (optional part)
+Dockerfile, .dockerignore            API image (optional part)
+requirements-api.txt                 packages of the API image
 reports/                             saved results (json, csv, figures); no large files
 artifacts/                           trained models; NOT in git
 data/                                raw and processed data; NOT in git
@@ -111,6 +115,79 @@ It prints the prediction and probabilities of both models and a short explanatio
 and the effect of removing words (occlusion) for the Transformer. For very confident predictions the occlusion scores are close to zero,
 because the probabilities are saturated; do not read this as "no word matters".
 
+## 5b. HTTP API and Docker image (optional part)
+
+A FastAPI service (`app/main.py`) serves the saved TF-IDF model and the fine-tuned Transformer. It reuses the functions of
+`src/predict_review.py` and `src/text_normalize.py`, so the API and the offline script give the same predictions.
+Both models are loaded once at start-up. The only input is the review text; a rating or a label in the request is rejected.
+Raw review texts are never written to the log. The maximum text length is 5000 characters (environment variable `MAX_TEXT_CHARS`).
+
+### Endpoints
+
+| Method and path | Purpose |
+|---|---|
+| `GET /health` | The process is alive (always 200). |
+| `GET /ready` | 200 when both models are loaded, 503 otherwise; also reports `load_seconds`. |
+| `POST /normalize` | Returns the normalized text. |
+| `POST /tokenize` | Transformer tokens, ids, token count, `truncated` flag. |
+| `POST /predict/tfidf`, `POST /predict/transformer`, `POST /predict/compare` | Recommendation and rating-band labels with probabilities. |
+| `POST /predict` | Same, with the model chosen in the body (`transformer`, `tfidf`, `compare`). |
+
+Error codes: 422 for empty, whitespace-only or too long text and for extra fields; 400 for an unknown model or tokenizer;
+503 when a model is not loaded; 500 for an unexpected error.
+
+### Run without Docker
+
+From the project root, with the environment active and the files of `artifacts/` present:
+
+```
+uvicorn app.main:app --port 8000
+```
+
+Open `http://127.0.0.1:8000/docs` to try the endpoints. Example request:
+
+```
+curl -X POST http://127.0.0.1:8000/predict/compare -H "Content-Type: application/json" -d '{"text": "..."}'
+```
+
+### Tests
+
+```
+python -m pytest tests -v
+```
+
+There are 12 tests with `TestClient` (health, ready, normalize, 422 / 400 / 503 cases, one shape check per predict endpoint).
+Result on the author's machine: 12 passed in 14.02 s (Python 3.11.18, pytest 9.2.0).
+
+### Docker image (CPU only)
+
+The image contains the code and the packages of `requirements-api.txt` (CPU build of torch). The model files are **not** inside
+the image; the `artifacts/` folder is mounted read-only at `/artifacts`.
+
+```
+docker build -t digikala-api .
+docker run --rm -p 8000:8000 -v "$(pwd)/artifacts:/artifacts:ro" --name digikala-api digikala-api
+```
+
+The Dockerfile uses the Aliyun mirrors for `pip` by default (the normal package servers were unreachable on the author's network).
+On another network override them with `--build-arg INDEX_URL=https://pypi.org/simple/` and
+`--build-arg TORCH_LINKS=https://download.pytorch.org/whl/cpu` (not tested here).
+
+Measured on the author's machine (Ubuntu, CPU, Docker 29.7.2; single measurements, not averages):
+
+| Item | Value |
+|---|---|
+| Build from scratch | 6 min 15 s |
+| Image size (`docker images`) | disk usage 1.95 GB, content size 416 MB |
+| Model loading (`load_seconds` from `/ready`) | 10.8 s in the container, 10.9 s without Docker |
+| `/health` and `/ready` from inside the container | both answered, ready = true |
+| One `/predict/compare` request (12-token review) | TF-IDF 3.1 ms, Transformer 36.1 ms |
+
+Failure test: starting the container without mounting `artifacts/` gives `FileNotFoundError` for both models in the log;
+the service stays up, `/health` returns 200, `/ready` and the predict endpoints return 503.
+
+Assumptions and not tested: the models were trained with CUDA, the image uses the CPU build of torch; GPU in the container,
+other networks, low-memory machines, wrong working directory and port conflicts were not tested.
 ## 6. Files that are not in git
 
 | path | why | how to rebuild |
